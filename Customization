@@ -1,0 +1,629 @@
+<?php
+/*
+Plugin Name: PMPro Customizations
+Plugin URI: http://www.paidmembershipspro.com/wp/pmpro-customizations/
+Description: Customizations for Paid Memberships Pro
+Version: .1
+Author: Stranger Studios
+Author URI: http://www.strangerstudios.com
+*/
+
+//use our checkout template
+global $pmprorh_options, $profileuser;
+//$pmprorh_options["register_redirect_url"] = home_url("/tools/rq/");
+$pmprorh_options["use_email_for_login"] = true;
+//$pmprorh_options["directory_page"] = "/directory/";
+//$pmprorh_options["profile_page"] = "/profile/";
+
+/// ------ Have username equal email address; --------  ///
+global $bstate;
+function my_init_email_as_username()
+{
+  //check for level as well to make sure we're on checkout page
+  if(empty($_REQUEST['level']))
+    return;
+  
+  if(!empty($_REQUEST['bemail']))
+    $_REQUEST['username'] = $_REQUEST['bemail'];
+    
+  if(!empty($_POST['bemail']))
+    $_POST['username'] = $_POST['bemail'];
+    
+  if(!empty($_GET['bemail']))
+    $_GET['username'] = $_GET['bemail'];
+}
+add_action('init', 'my_init_email_as_username');
+
+
+function pmpro_allow_large_joins() {
+    global $wpdb;
+    $wpdb->query('SET SQL_BIG_SELECTS=1');
+}
+add_action('init', 'pmpro_allow_large_joins', 5);
+
+#region - /// ------ Match mailling address to business address if empty ------ ///
+function my_init_mailling_address()
+{
+  //check for level as well to make sure we're on checkout page
+  if(empty($_REQUEST['level']))
+    return;
+  
+  if(!empty($_REQUEST['baddress1']))
+    $_REQUEST['Mailaddress1'] = $_REQUEST['baddress1'];
+    
+  if(!empty($_POST['baddress1']))
+    $_POST['Mailaddress1'] = $_POST['baddress1'];
+    
+  if(!empty($_GET['baddress1']))
+    $_GET['Mailaddress1'] = $_GET['baddress1'];
+
+  if(!empty($_REQUEST['baddress2']))
+    $_REQUEST['Mailaddress2'] = $_REQUEST['baddress2'];
+    
+  if(!empty($_POST['baddress2']))
+    $_POST['Mailaddress2'] = $_POST['baddress2'];
+    
+  if(!empty($_GET['baddress2']))
+    $_GET['Mailaddress2'] = $_GET['baddress2'];
+
+  if(!empty($_REQUEST['bcity']))
+    $_REQUEST['Mailcity'] = $_REQUEST['bcity'];
+    
+  if(!empty($_POST['bcity']))
+    $_POST['Mailcity'] = $_POST['bcity'];
+    
+  if(!empty($_GET['bcity']))
+    $_GET['Mailcity'] = $_GET['bcity'];
+
+  if(!empty($_REQUEST['bstate']))
+    $_REQUEST['Mailprovince'] = $_REQUEST['bstate'];
+    
+  if(!empty($_POST['bstate']))
+    $_POST['Mailprovince'] = $_POST['bstate'];
+    
+  if(!empty($_GET['bstate']))
+    $_GET['Mailprovince'] = $_GET['bstate'];
+}
+add_action('init', 'my_init_email_as_username');
+#endregion
+
+
+
+#region - /// ----- Add the fields to the checkout form ---- ///
+
+
+#region  --  ///////////////   Change default country in checkout;      /////////////////
+
+function filter_pmpro_default_country( $default_country ) { 
+    // Set country code to "CA" for Canada.
+    $default_country = "CA";
+    return $default_country;
+}; 
+         
+add_filter( 'pmpro_default_country', 'filter_pmpro_default_country', 10, 2 ); 
+
+
+
+#endregion
+
+
+#region  --  //////////////    Function to set company name as main     ////////////////
+
+#endregion
+
+
+
+#endregion
+
+
+
+	#region(sub) -- ////////    Filter Provinces  ////////////
+function filter_pmpro_states_ab( $states ) { 
+    // Canadian province abbreviations
+    $province = array("AB","BC","MB","NB","NL","NS","NT","NU","ON","PE","QC","SK","YT");
+    // Merge with received US state abbreviations (append to end)
+    return $province;}
+
+add_filter('pmpro_states_abbreviations', 'filter_pmpro_states_ab');
+
+
+function filter_pmpro_states( $states ) { 
+$pmpro_default_province = "NS";
+$province = array( 
+        "AB" => "Alberta",
+        "BC" => "British Columbia",
+        "MB" => "Manitoba",
+        "NB" => "New Brunswick",
+        "NL" => "Newfoundland and Labrador",
+        "NS" => "Nova Scotia",
+        "NT" => "Northwest Territories",
+        "NU" => "Nunavut",
+        "ON" => "Ontario",
+        "PE" => "Prince Edward Island",
+        "QC" => "Quebec",
+        "SK" => "Saskatchewan",
+        "YT" => "Yukon"	);
+    return $province;	}
+add_filter( 'pmpro_states', 'filter_pmpro_states'); 
+#endregion(sub)
+
+#endregion
+
+
+#region  --  /////////////          ADDING HOOKS         /////////////////////////
+
+	#region(sub) -- ////////////////   Add mailing hook  ///////////////////
+function pmprorh_register_form_mailing()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["pmprorh_at_mailing"]))
+	{foreach($pmprorh_registration_fields["pmprorh_at_mailing"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmprorh_at_mailing", "pmprorh_register_form_at_mailing");
+
+function pmprorh_pmpro_checkout_at_mailing()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["at_mailing"]))
+	{foreach($pmprorh_registration_fields["at_mailing"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmpro_checkout_at_mailing", "pmprorh_pmpro_checkout_at_mailing");
+#endregion(sub)
+
+
+	#region(sub) -- /////////////// Add before_name hook //////////////////
+
+function pmprorh_register_form_before_name() {
+	global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["pmprorh_before_name"]))
+	{foreach($pmprorh_registration_fields["pmprorh_before_name"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmprorh_before_name", "pmprorh_register_form_before_name");
+
+function pmprorh_pmpro_checkout_before_name()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["before_name"]))
+	{foreach($pmprorh_registration_fields["before_name"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmpro_checkout_before_name", "pmprorh_pmpro_checkout_before_name");
+#endregion(sub)
+
+
+	#region(sub) -- /////////////// Add before_email hook /////////////////
+function pmprorh_register_form_before_email($profileuser)
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["pmprorh_before_email"]))
+	{foreach($pmprorh_registration_fields["pmprorh_before_email"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmprorh_before_email", "pmprorh_register_form_before_email");
+
+function pmprorh_pmpro_checkout_before_email($profileuser)
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["before_email"]))
+	{foreach($pmprorh_registration_fields["before_email"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmpro_checkout_before_email", "pmprorh_pmpro_checkout_before_email");
+
+#endregion(sub)
+
+
+	#region(sub) -- /////////////// Add after_bphone hook /////////////////
+function pmprorh_register_form_after_bphone()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["pmprorh_after_bphone"]))
+	{foreach($pmprorh_registration_fields["pmprorh_after_bphone"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmprorh_after_bphone", "pmprorh_register_form_after_bphone");
+
+function pmprorh_pmpro_checkout_after_bphone()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["after_bphone"]))
+	{foreach($pmprorh_registration_fields["after_bphone"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmpro_checkout_after_bphone", "pmprorh_pmpro_checkout_after_bphone");
+#endregion(sub)
+
+
+	#region(sub) -- /////////////// Add after_company hook //////////////////
+function pmprorh_register_form_after_company()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["pmprorh_after_company"]))
+	{foreach($pmprorh_registration_fields["pmprorh_after_company"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmprorh_after_company", "pmprorh_register_form_after_company");
+
+function pmprorh_pmpro_checkout_after_company()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["after_company"]))
+	{foreach($pmprorh_registration_fields["after_company"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmpro_checkout_after_company", "pmprorh_pmpro_checkout_after_company");
+#endregion(sub)
+
+
+	#region(sub) -- ////////////// Add after_home hook  ////////////////////
+function pmprorh_register_form_after_home()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["pmprorh_after_home"]))
+	{foreach($pmprorh_registration_fields["pmprorh_after_home"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmprorh_after_home", "pmprorh_register_form_after_home");
+
+function pmprorh_pmpro_checkout_after_home()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["after_home"]))
+	{foreach($pmprorh_registration_fields["after_home"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmpro_checkout_after_home", "pmprorh_pmpro_checkout_after_home");
+#endregion(sub)
+
+
+	#region(sub) -- ///////////// Add after_alt hook   ////////////////////
+function pmprorh_register_form_after_alt()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["pmprorh_after_alt"]))
+	{foreach($pmprorh_registration_fields["pmprorh_after_alt"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmprorh_after_alt", "pmprorh_register_form_after_alt");
+
+function pmprorh_pmpro_checkout_after_alt()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["after_alt"]))
+	{foreach($pmprorh_registration_fields["after_alt"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmpro_checkout_after_alt", "pmprorh_pmpro_checkout_after_alt");
+#endregion(sub)
+
+
+	#region(sub) -- //////////// Add after_social hook  ///////////////////
+function pmprorh_register_form_after_social()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["pmprorh_after_social"]))
+	{foreach($pmprorh_registration_fields["pmprorh_after_social"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmprorh_after_social", "pmprorh_register_form_after_social");
+
+function pmprorh_pmpro_checkout_after_social()
+{global $pmprorh_registration_fields;	
+	if(!empty($pmprorh_registration_fields["after_social"]))
+	{foreach($pmprorh_registration_fields["after_social"] as $field)
+		{if(pmprorh_checkFieldForLevel($field) && $field->profile !== "only" && $field->profile !== "only_admin")
+			$field->displayAtCheckout();}}}
+add_action("pmpro_checkout_after_social", "pmprorh_pmpro_checkout_after_social");
+#endregion(sub)
+
+#endregion
+
+
+
+
+// Loads user column in User Admin Panal
+
+function new_contact_methods( $contactmethods ) {
+    $contactmethods['company'] = 'Company';
+    return $contactmethods;
+}
+add_filter( 'user_contactmethods', 'new_contact_methods', 10, 1 );
+
+
+function new_modify_user_table( $column ) {
+    $column['company'] = 'Company';
+    return $column;
+}
+add_filter( 'manage_users_columns', 'new_modify_user_table' );
+
+function new_modify_user_table_row( $val, $column_name, $user_id ) {
+    switch ($column_name) {
+        case 'company' :
+            return get_the_author_meta( 'company', $user_id );
+            break;
+        default:
+    }
+    return $val;
+}
+add_filter( 'manage_users_custom_column', 'new_modify_user_table_row', 10, 3 );
+
+
+
+
+#region  --  ////////////          Custom fields           /////////////////
+function my_pmprorh_init($profileuser)
+{    //don't break if Register Helper is not loaded
+    if(!function_exists("pmprorh_add_registration_field"))
+    {return false;}
+	
+////    Fields before email   //////	
+    $fields = array();
+	
+    $fields[] = new PMProRH_Field('company','text', array('size'=>50,'label'=>'Company Name',
+		'profile'=>true,'required'=>true, 'memberslistcsv'=>true ));
+		
+		$fields[] = new PMProRH_Field('Coaddress1', 'text', array(
+            'size'=>50,'required'=>true,'label'=>'Company Address','profile'=>true,
+			'memberslistcsv'=>true,'hint'=>'Street Address Line 1'));	
+		
+	$fields[] = new PMProRH_Field('Coaddress2','text', array(
+            'size'=>50,'label'=>' ','profile'=>true, 'memberslistcsv'=>true,'hint'=>'Street Address Line 2'));	
+		
+	$fields[] = new PMProRH_Field('Cocity','text', array(
+            'size'=>30, 'label'=>'City','profile'=>true,'required'=>true,'memberslistcsv'=>true));		
+
+
+	$fields[] = new PMProRH_Field('Coprovince', 'select',array(
+			'value'=>'NS','label'=>'Province','required'=>true,'profile'=>true,'options'=>array(
+				'BC' => 'British Columbia',
+				'MB' => 'Manitoba',
+				'NB' => 'New Brunswick',
+				'NL' => 'Newfoundland and Labrador',
+				'NS' => 'Nova Scotia',
+				'NT' => 'Northwest Territories',
+				'NU' => 'Nunavut',
+				'ON' => 'Ontario',
+				'PE' => 'Prince Edward Island',
+				'QC' => 'Quebec',
+				'SK' => 'Saskatchewan',
+				'YT' => 'Yukon')));				
+		
+	$fields[] = new PMProRH_Field('Cozipcode','text',array(
+            'size'=>6, 'label'=>'Postal Code','profile'=>true,'required'=>true,'memberslistcsv'=>true));		
+		
+	$fields[] = new PMProRH_Field('Cocountry','select',array(
+			'label'=>'Country','profile'=>true,'memberslistcsv'=>true,
+			'value'=>'CA','options'=>array('CA' => 'Canada')));		
+
+	
+    foreach($fields as $field)
+        pmprorh_add_registration_field("before_email", $field);
+		
+
+////    Mailing Fields  //////		
+    $fields = array();
+	
+	$fields[] = new PMProRH_Field("MailingQ", "html", array("label"=>"Maiiling Options",
+	"html"=>"<p style='padding-top:2.75px; margin-bottom:-3px; margin-left:0; word-wrap: normal; word-break: normal;'>Is your company's mailing address the same as above?</p>", 
+			  'divclass'=>'mailq', 'profile'=>'true')); 
+   
+    $fields[] = new PMProRH_Field('radiomailadd', 'radio', array('label'=>' ',
+		'value'=>'yes', 'divclass'=>'radiox', 'profile'=>true, 'options'=>array('yes'=>'Yes','no'=>'No')));
+    
+    $fields[] = new PMProRH_Field(
+        'Mailingaddress1',  'text', array('size'=>50,'label'=>'Mailing Address', 'profile'=>true,
+			'memberslistcsv'=>true,'hint'=>'Street Address Line 1','depends'=>array(array(
+				'id'=>'radiomailadd','value'=>'no'))));	
+		
+    $fields[] = new PMProRH_Field(
+        'Mailingaddress2', 'text', array('size'=>50,'label'=>' ','profile'=>true,
+			'memberslistcsv'=>true,'hint'=>'Street Address Line 2','depends'=>array(
+			array('id'=>'radiomailadd','value'=>'no',))));	
+		
+    $fields[] = new PMProRH_Field(
+        'Mailingcity','text', array('size'=>30,'label'=>'City', 'profile'=>true,
+			'memberslistcsv'=>true,'depends'=>array(array(
+				'id'=>'radiomailadd','value'=>'no'))));		
+
+    $fields[] = new PMProRH_Field(
+        'Mailingprovince', 'select',array('value'=>'NS','label'=>'Province', 'profile'=>true,
+			'depends'=>array(array(
+				'id'=>'radiomailadd','value'=>'no')),
+            'options'=>array(       // <option> elements for select field
+				'BC' => 'British Columbia',
+				'MB' => 'Manitoba',
+				'NB' => 'New Brunswick',
+				'NL' => 'Newfoundland and Labrador',
+				'NS' => 'Nova Scotia',
+				'NT' => 'Northwest Territories',
+				'NU' => 'Nunavut',
+				'ON' => 'Ontario',
+				'PE' => 'Prince Edward Island',
+				'QC' => 'Quebec',
+				'SK' => 'Saskatchewan',
+				'YT' => 'Yukon'
+        )));				
+		
+	$fields[] = new PMProRH_Field(
+        'mailzipcode', 'text', array('size'=>6, 'label'=>'Postal Code', 'profile'=>true,
+			'memberslistcsv'=>true,'depends'=>array(array(
+				'id'=>'radiomailadd','value'=>'no'))));		
+		
+	$fields[] = new PMProRH_Field(
+        'Mailcountry','select',array('label'=>"Country",'memberslistcsv'=>true, 'profile'=>true,
+			'value'=>'CA','depends'=>array(array(
+				'id'=>'radiomailadd','required'=>true, 'value'=>'no')),
+            'options'=>array( 'CA' => 'Canada' )));				
+		
+
+    foreach($fields as $field)
+        pmprorh_add_registration_field('at_mailing', $field );
+		
+/////   After Company Phone /////
+    $fields = array();
+	$fields[] = new PMProRH_Field('companyemail', 'text', array(
+            'size'=>50,'label'=>'Company Email', 'profile'=>true, 'memberslistcsv'=>true,));	
+	
+	$fields[] = new PMProRH_Field('bphone', 'text', array('size'=>20, 'label'=>'Company Number',
+		'memberslistcsv'=>true, 'divclass'=>'phonenum', 'profile'=>true));	
+		
+	$fields[] = new PMProRH_Field('bphoneext', 'text', array('size'=>6, 'label'=>'Ext:',
+		'memberslistcsv'=>true, 'divclass'=>'extn', 'profile'=>true));	
+			
+	$fields[] = new PMProRH_Field(
+        'bcellphone', 'text', array('size'=>20, 'label'=>'Company Cell Number',
+			'memberslistcsv'=>true, 'divclass'=>'phonenum', 'profile'=>true));
+
+	$fields[] = new PMProRH_Field('bcellphoneext', 'text', array('size'=>6, 'label'=>'Ext:',
+		'memberslistcsv'=>true, 'divclass'=>'extn', 'profile'=>true));				
+
+	$fields[] = new PMProRH_Field(
+        'bwebsite', 'text', array('size'=>30, 'label'=>'Company Website',
+			'memberslistcsv'=>true, 'profile'=>true, 'value'=>'http://'));		
+ 
+	$fields[] = new PMProRH_Field(
+        'bempnum', 'text', array('size'=>20, 'label'=>"# of Employee's",
+			'memberslistcsv'=>true, 'profile'=>true));		
+
+	$fields[] = new PMProRH_Field(
+        'briefdes', 'textarea', array('label'=>'Brief Description',	'memberslistcsv'=>true, 
+		'rows'=>'4', 'cols'=>'50', 'class'=>'briefarea', 'required'=>true, 'profile'=>true,
+		"hint"=>"Short business description for directory <i>(Max 250 char.)</i> <b><span id='countbrief'></span></b>"));		
+
+	$fields[] = new PMProRH_Field(
+        'longdes', 'textarea', array('label'=>'Full Description',	'memberslistcsv'=>true, 
+		'rows'=>'14', 'cols'=>'50', 'class'=>'longarea', 'required'=>true, 'profile'=>true,
+		"hint"=>"Full business description for profile <i>(Max 1,500 char.)</i> <b><span id='countlong'></span></b>"));	
+
+    foreach($fields as $field)
+        pmprorh_add_registration_field('after_bphone', $field);
+		
+////    Home Fields  //////		
+    $fields = array();
+	
+			
+	$fields[] = new PMProRH_Field('Homeaddress1', 'text', array(
+            'size'=>50,'required'=>true,'label'=>'Home Address','profile'=>true,
+			'memberslistcsv'=>true,'hint'=>'Street Address Line 1'));	
+		
+	$fields[] = new PMProRH_Field('Homeaddress2','text', array(
+            'size'=>50,'label'=>' ','profile'=>true, 'memberslistcsv'=>true,'hint'=>'Street Address Line 2'));	
+		
+	$fields[] = new PMProRH_Field('Homecity','text', array(
+            'size'=>30, 'label'=>'City', 'profile'=>true, 'required'=>true,'memberslistcsv'=>true));		
+
+
+	$fields[] = new PMProRH_Field('Homeprovince', 'select',array(
+			'value'=>'NS','label'=>'Province', 'profile'=>true, 'required'=>true,'options'=>array(
+				'BC' => 'British Columbia',
+				'MB' => 'Manitoba',
+				'NB' => 'New Brunswick',
+				'NL' => 'Newfoundland and Labrador',
+				'NS' => 'Nova Scotia',
+				'NT' => 'Northwest Territories',
+				'NU' => 'Nunavut',
+				'ON' => 'Ontario',
+				'PE' => 'Prince Edward Island',
+				'QC' => 'Quebec',
+				'SK' => 'Saskatchewan',
+				'YT' => 'Yukon')));				
+		
+	$fields[] = new PMProRH_Field('homezipcode','text',array(
+            'size'=>6, 'label'=>'Postal Code', 'profile'=>true, 'required'=>true,'memberslistcsv'=>true));		
+		
+	$fields[] = new PMProRH_Field('Homecountry','select',array(
+			'label'=>'Country','required'=>true, 'profile'=>true, 'memberslistcsv'=>true,
+			'value'=>'CA','options'=>array('CA' => 'Canada')));		
+
+	$fields[] = new PMProRH_Field('Homephone','text', array(
+            'size'=>20, 'label'=>'Personal Number', 'profile'=>true,'divclass'=>'phonenum','required'=>true,'memberslistcsv'=>true));	
+
+	$fields[] = new PMProRH_Field('Homephoneext', 'text', array('size'=>6, 'label'=>'Ext:',
+		'memberslistcsv'=>true, 'profile'=>true, 'divclass'=>'extn'));			
+			
+	$fields[] = new PMProRH_Field('Homecellphone','text', array(
+            'size'=>20, 'divclass'=>'phonenum', 'profile'=>true, 'label'=>'Alternative Number','memberslistcsv'=>true));				
+	
+	$fields[] = new PMProRH_Field('Altcellphoneext', 'text', array('size'=>6, 'label'=>'Ext:',
+		'memberslistcsv'=>true, 'profile'=>true, 'divclass'=>'extn'));	
+	
+    foreach($fields as $field)
+        pmprorh_add_registration_field('before_name',$field );
+
+		
+		
+////    Alternate Fields  //////		
+    //define the fields
+    $fields = array();
+			
+	$fields[] = new PMProRH_Field('Altfirstname', 'text', array(
+		'size'=>30,'label'=>'First Name','profile'=>true,'memberslistcsv'=>true,));	
+		
+	$fields[] = new PMProRH_Field('Altlasttname', 'text', array(
+            'size'=>30,'label'=>'Last Name','profile'=>true,'memberslistcsv'=>true,));	
+		
+	$fields[] = new PMProRH_Field('Altemail', 'text', array(
+            'size'=>50,'label'=>'Email','profile'=>true,'memberslistcsv'=>true,));					
+		
+	$fields[] = new PMProRH_Field('Altphone', 'text', array(
+            'size'=>20, 'divclass'=>'phonenum','profile'=>true, 'label'=>'Phone Number','memberslistcsv'=>true,));
+
+	$fields[] = new PMProRH_Field('Altphoneext', 'text', array('size'=>6, 'label'=>'Ext:',
+		'memberslistcsv'=>true,'profile'=>true, 'divclass'=>'extn'));				
+		
+	foreach($fields as $field)
+        pmprorh_add_registration_field('after_home',$field);		
+
+		
+////    Social Media Fields  //////		
+    //define the fields
+    $fields = array();
+			
+	$fields[] = new PMProRH_Field('sfacebook', 'text',array(
+            'size'=>50, 'label'=>'FaceBook Link','profile'=>true,'memberslistcsv'=>true,));	
+		
+	$fields[] = new PMProRH_Field('stwitter', 'text',  array(
+            'size'=>50, 'class'=>'stwitter','profile'=>true,'label'=>'Twitter Handle','profile'=>true,
+			'memberslistcsv'=>true,));	
+		
+
+	foreach($fields as $field)
+        pmprorh_add_registration_field('after_alt', $field);		
+		
+		
+////    Other Fields  //////		
+    //define the fields
+    $fields = array();
+			
+	$fields[] = new PMProRH_Field('otherradio', 'select',  array(
+		'label'=>'How Did You hear About Us',
+		'memberslistcsv'=>true,
+            'options'=>array(       // 
+                'laker'=>'The Laker',//
+                'FRABA_flyer'=>'FRABA Flyer',  // 
+				'FRABA_event'=>'FRABA Event',
+				'Reffra'=>'Referral', 				
+				'OtherAd'=>'Other Advertising',
+				'Other'=>'Other' 
+        )));
+		
+
+		
+    $fields[] = new PMProRH_Field('Referral1', 'text', array(
+            'size'=>30, 'label'=>'Refered By',
+			'memberslistcsv'=>true,'depends'=>array(
+			array('id'=>'otherradio','value'=>'Reffra'))));
+		
+    $fields[] = new PMProRH_Field('Other1', 'text',  array(
+            'size'=>30, 'label'=>'Other','memberslistcsv'=>true,
+			'depends'=>array(array('id'=>'otherradio','value'=>'Other'))));
+		
+
+	foreach($fields as $field)
+        pmprorh_add_registration_field("after_social",$field);		
+
+		
+		
+		
+	$mailshowprofile = new PMProRH_Field("mailshowprofile", "checkbox", array(
+		"profile"=>'only', 'value'=>true));	
+		pmprorh_add_registration_field("before_email",$mailshowprofile);
+	
+}
+add_action("init", "my_pmprorh_init");
+
+
+#endregion
+
+
+
+?>
